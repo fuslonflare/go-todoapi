@@ -26,18 +26,25 @@ var (
 )
 
 func main() {
+	_, err := os.Create("tmp/live")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.Remove("tmp/live")
+
 	err = godotenv.Load("local.env")
 	if err != nil {
 		log.Printf("please consider environment variables: %s\n", err)
 	}
 
+	fmt.Println("DB_CONN =", os.Getenv("DB_CONN"))
 	db, err := gorm.Open(sqlite.Open(os.Getenv("DB_CONN")), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
 	}
 
-	if err :=db.AutoMigrate(&todo.Todo{});err != nil {
-		log.Println("auto migrate db",err)
+	if err := db.AutoMigrate(&todo.Todo{}); err != nil {
+		log.Println("auto migrate db", err)
 	}
 
 	r := gin.Default()
@@ -52,22 +59,10 @@ func main() {
 	}
 	r.Use(cors.New(config))
 
-	r.GET("/healthz", func(c *gin.Context) {
-		c.Status(200)
-	})
-	r.GET("/limitz", limitedHandler)
-	r.GET("/x", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"buildcommit": buildcommit,
-			"buildtime":   buildtime,
-		})
-	})
+	gormStore := todo.NewGormStore(db)
+	handler := todo.NewTodoHandler(gormStore)
 
-
-	handler := todo.NewTodoHandler(db)
-	r.POST("/todos", handler.NewTask)
-	r.GET("/todos", handler.List)
-	r.DELETE("/todos/:id", handler.Remove)
+	r.POST("/todos", todo.NewGinHandler(handler.NewTask))
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
