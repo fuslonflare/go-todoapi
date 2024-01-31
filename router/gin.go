@@ -1,6 +1,9 @@
-package todo
+package router
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-gonic/gin"
+	"github.com/pallat/todoapi/todo"
+)
 
 type MyContext struct {
 	*gin.Context
@@ -31,7 +34,7 @@ func (c *MyContext) Audience() string {
 	return ""
 }
 
-func NewGinHandler(handler func(Context)) gin.HandlerFunc {
+func NewGinHandler(handler func(todo.Context)) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		handler(NewMyContext(ctx))
 	}
