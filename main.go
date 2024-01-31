@@ -10,7 +10,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"golang.org/x/time/rate"
@@ -49,22 +48,11 @@ func main() {
 		log.Println("auto migrate db", err)
 	}
 
-	r := gin.Default()
-	config := cors.DefaultConfig()
-	config.AllowOrigins = []string{
-		"http://localhost:8080",
-	}
-	config.AllowHeaders = []string{
-		"Origin",
-		"Authorization",
-		"TransactionID",
-	}
-	r.Use(cors.New(config))
-
+	r := router.NewMyRouter()
 	gormStore := store.NewGormStore(db)
 	handler := todo.NewTodoHandler(gormStore)
 
-	r.POST("/todos", router.NewGinHandler(handler.NewTask))
+	r.POST("/todos", handler.NewTask)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
